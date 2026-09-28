@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>تفعيل مالك المنصة | المؤرخ الصغير</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{font-family:Alexandria,sans-serif;color:#202b27;background:#f4f7f2}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px}.panel{width:min(460px,100%);background:#fff;border:1px solid #e4eae3;border-radius:12px;padding:28px;box-shadow:0 18px 55px #18392b12}.brand{font-size:12px;color:#24664e;font-weight:700}.brand strong{display:block;color:#202b27;font-size:19px}.panel h1{font-size:18px;margin:25px 0 6px}.panel p{font-size:11px;color:#718078;line-height:1.9}.warning{background:#fff7e5;border-right:3px solid #d99b28;padding:10px 12px;font-size:10px;margin:16px 0}.field{display:block;margin:14px 0}.field span{display:block;font-size:10px;font-weight:600;margin-bottom:6px}.field input{width:100%;border:1px solid #e4eae3;border-radius:7px;padding:12px;font:inherit;font-size:12px}.submit{width:100%;border:0;border-radius:7px;background:#24664e;color:#fff;padding:12px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;margin-top:8px}.submit:disabled{opacity:.6;cursor:wait}.status{min-height:24px;font-size:10px;color:#24664e;margin-top:12px}.back{display:block;text-align:center;font-size:10px;color:#24664e;text-decoration:none;margin-top:12px}
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <div class="brand"><strong>📜 المؤرخ الصغير</strong>مستر إياد الطيب</div>
+    <h1>تفعيل حساب مالك المنصة</h1>
+    <p>استخدم هذه الصفحة مرة واحدة بعد نشر الموقع، بعد إنشاء حسابك والتحقق من بريدك الإلكتروني في Supabase.</p>
+    <div class="warning">أدخل البيانات في الموقع المنشور فقط. كلمة المرور ورمز الإعداد لا يُحفظان في الصفحة، ولا ترسلهما في المحادثة.</div>
+    <form id="claimForm">
+      <label class="field"><span>بريد حساب المالك</span><input name="email" type="email" autocomplete="username" required></label>
+      <label class="field"><span>كلمة المرور</span><input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+      <label class="field"><span>رمز الإعداد الذي حفظته في Vercel</span><input name="setupToken" type="password" autocomplete="off" required minlength="32"></label>
+      <button class="submit" type="submit">تفعيل حساب المالك</button>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </form>
+    <a class="back" href="/">العودة إلى المنصة</a>
+  </main>
+  <script>
+    const form=document.getElementById('claimForm');
+    const statusNode=document.getElementById('status');
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const button=form.querySelector('button');
+      const values=new FormData(form);
+      button.disabled=true;
+      statusNode.textContent='جارٍ التحقق من الجلسة وتفعيل الحساب...';
+      try{
+        const configResponse=await fetch('/api/config',{cache:'no-store'});
+        if(!configResponse.ok)throw new Error('أكمل إعداد Supabase في متغيرات Vercel أولًا.');
+        const config=await configResponse.json();
+        const loginResponse=await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=password`,{
+          method:'POST',
+          headers:{apikey:config.anonKey,'Content-Type':'application/json'},
+          body:JSON.stringify({email:values.get('email'),password:values.get('password')})
+        });
+        const session=await loginResponse.json();
+        if(!loginResponse.ok||!session.access_token)throw new Error('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور وتأكيد البريد.');
+        const claimResponse=await fetch('/api/claim-owner',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-owner-setup-token':values.get('setupToken')},
+          body:JSON.stringify({accessToken:session.access_token})
+        });
+        const result=await claimResponse.json();
+        if(!claimResponse.ok)throw new Error(result.error||'تعذر تفعيل المالك.');
+        form.reset();
+        statusNode.textContent='تم تفعيل حسابك كمالك ومدرس للمنصة. يمكنك الآن تسجيل الدخول من الصفحة الرئيسية.';
+      }catch(error){
+        statusNode.textContent=error.message||'حدث خطأ أثناء إعداد الحساب.';
+      }finally{
+        button.disabled=false;
+      }
+    });
+  </script>
+</body>
+</html>
