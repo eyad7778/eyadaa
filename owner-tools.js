@@ -210,7 +210,6 @@ async function renderCourseManager(courseId) {
         course.sections = undefined;
         await renderCourseManager(course.id);
       });
-    };
   });
 }
 
