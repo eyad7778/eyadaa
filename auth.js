@@ -195,6 +195,21 @@ document.addEventListener('click', async event => {
     return;
   }
 
+  const adminEntry = event.target.closest('[data-admin-entry]');
+  if (adminEntry) {
+    event.preventDefault();
+    if (!client) {
+      toast('خدمة الحسابات غير مهيأة بعد. أكمل إعداد Supabase ومتغيرات Vercel أولًا.');
+    } else if (!currentUser) {
+      openAuthDialog();
+    } else if (currentProfile?.role === 'owner') {
+      window.medadNavigate?.('teacher');
+    } else {
+      toast('رابط admin متاح لمدير المنصة فقط.');
+    }
+    return;
+  }
+
   const roleButton = event.target.closest('#mainNav [data-role]');
   if (roleButton) {
     const needsOwner = roleButton.dataset.role === 'teacher';
@@ -225,6 +240,11 @@ try {
   const { data, error } = await client.auth.getSession();
   if (error) throw error;
   await refreshSession(data.session?.user || null);
+  if (new URLSearchParams(window.location.search).has('admin')) {
+    if (!currentUser) openAuthDialog();
+    else if (currentProfile?.role === 'owner') window.medadNavigate?.('teacher');
+    else toast('رابط admin متاح لمدير المنصة فقط.');
+  }
   client.auth.onAuthStateChange((_event, session) => {
     window.setTimeout(() => refreshSession(session?.user || null), 0);
   });
