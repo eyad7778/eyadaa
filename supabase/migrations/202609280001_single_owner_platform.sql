@@ -26,11 +26,18 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   display_name text not null default '',
+  phone text not null default '',
+  guardian_phone text not null default '',
+  grade text not null default '',
   avatar_url text,
   role text not null default 'student' check (role in ('student', 'owner')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists phone text not null default '';
+alter table public.profiles add column if not exists guardian_phone text not null default '';
+alter table public.profiles add column if not exists grade text not null default '';
 
 create or replace function public.is_platform_owner()
 returns boolean
@@ -54,14 +61,33 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  account_role text := 'student';
 begin
-  insert into public.profiles (id, email, display_name)
+  -- Lock the singleton row so concurrent signups cannot both become owner.
+  update public.platform_settings
+  set owner_id = new.id, updated_at = now()
+  where singleton and owner_id is null;
+
+  if found then
+    account_role := 'owner';
+  end if;
+
+  insert into public.profiles (id, email, display_name, phone, guardian_phone, grade, role)
   values (
     new.id,
     new.email,
-    coalesce(nullif(new.raw_user_meta_data ->> 'display_name', ''), split_part(coalesce(new.email, ''), '@', 1))
+    coalesce(nullif(new.raw_user_meta_data ->> 'display_name', ''), split_part(coalesce(new.email, ''), '@', 1)),
+    coalesce(new.raw_user_meta_data ->> 'phone', ''),
+    coalesce(new.raw_user_meta_data ->> 'guardian_phone', ''),
+    coalesce(new.raw_user_meta_data ->> 'grade', ''),
+    account_role
   )
-  on conflict (id) do update set email = excluded.email;
+  on conflict (id) do update set
+    email = excluded.email,
+    phone = excluded.phone,
+    guardian_phone = excluded.guardian_phone,
+    grade = excluded.grade;
   return new;
 end;
 $$;

@@ -6,8 +6,8 @@
 
 - `supabase/migrations/202609280001_single_owner_platform.sql`: المواد والصفوف والكورسات والوحدات والمحاضرات ومصادر YouTube والموارد والاشتراكات والتقدم والاختبارات والواجبات والدرجات والإشعارات، مع سياسات RLS.
 - `api/config.js`: يعيد عنوان Supabase والمفتاح العام فقط.
-- `api/claim-owner.js`: يتحقق من جلسة Supabase وبريد المالك ورمز الإعداد، ثم يسمح بمطالبة المالك مرة واحدة.
-- `auth.js`: تسجيل دخول الطلاب وإنشاء الحسابات، وإظهار لوحة المالك للحساب الذي تمت مطالبته.
+- `api/claim-owner.js`: مسار توافق قديم لتفعيل مالك محدد يدويًا في قواعد بيانات سابقة.
+- `auth.js`: نقطة دخول واحدة لكل الحسابات؛ أول حساب يصبح مديرًا ومدرسًا، وباقي الحسابات طلاب، مع توجيه كل حساب إلى لوحته.
 - `.github/workflows/supabase-migrations.yml`: يطبق migrations تلقائيًا على قاعدة Supabase عند تحديث migrations على فرع `main`، بعد إعداد أسرار GitHub.
 
 ## الربط والنشر
@@ -15,11 +15,10 @@
 1. ارفع هذا المستودع إلى GitHub، ثم استورده في Vercel. اختر جذر المشروع الحالي كما هو.
 2. أنشئ مشروع Supabase من تكامل Supabase في Vercel أو من لوحة Supabase. إنشاء المشروع وربطه بحسابك يحتاج موافقتك مرة واحدة؛ لا يستطيع رفع ملفات الموقع إنشاء موارد سحابية داخل حسابك تلقائيًا.
 3. انسخ Project URL وPublishable/Anon key إلى متغيرات Vercel `SUPABASE_URL` و`SUPABASE_ANON_KEY`. أضف `SUPABASE_SERVICE_ROLE_KEY` كمتغير خادم خاص فقط، من دون بادئة `NEXT_PUBLIC_`.
-4. أضف `OWNER_EMAIL` ببريد الحساب الذي ستنشئه، و`OWNER_SETUP_TOKEN` برمز عشوائي قوي لا يقل عن 32 حرفًا. مثال لتوليده محليًا: `openssl rand -base64 48`. لا ترسل الرمز أو مفاتيح Supabase في المحادثة أو تحفظها في المستودع.
-5. انشر الموقع. أنشئ الحساب ببريد المالك من نافذة تسجيل الدخول، وأكّد البريد من رسالة Supabase. افتح `/owner-setup.html` على نطاق الموقع، وسجّل الدخول بالبريد وكلمة المرور ورمز الإعداد. لا تنفذ هذه الخطوة إلا لحسابك؛ مطالبة المالك لا يمكن تكرارها.
-6. فعّل تطبيق migration الأولية. إما من جهاز موثوق به لديه Supabase CLI: `supabase link --project-ref PROJECT_REF` ثم `supabase db push`; أو أضف أسرار GitHub `SUPABASE_ACCESS_TOKEN` و`SUPABASE_DB_PASSWORD` و`SUPABASE_PROJECT_REF`، وادفع migration إلى `main` لتشغيل workflow تلقائيًا.
-7. اضبط Site URL وRedirect URLs في Supabase Auth على نطاق Vercel الفعلي والنطاق المحلي الذي تستخدمه للتطوير، ثم أعد النشر بعد إضافة المتغيرات.
-8. عند اكتمال الإعداد، أنشئ مستودع GitHub جديدًا، ثم نفّذ: `git init`, `git add .`, `git commit -m "Initial platform setup"`, `git branch -M main`, `git remote add origin <GitHub-Repo-URL>`, `git push -u origin main`.
+4. انشر الموقع. أول شخص ينشئ حسابًا بعد تطبيق migration يصبح تلقائيًا مدير المنصة ومدرسها، وكل حساب لاحق يُنشأ كحساب طالب من نافذة التسجيل نفسها.
+5. فعّل تطبيق migration الأولية. إما من جهاز موثوق به لديه Supabase CLI: `supabase link --project-ref PROJECT_REF` ثم `supabase db push`; أو أضف أسرار GitHub `SUPABASE_ACCESS_TOKEN` و`SUPABASE_DB_PASSWORD` و`SUPABASE_PROJECT_REF`، وادفع migration إلى `main` لتشغيل workflow تلقائيًا.
+6. اضبط Site URL وRedirect URLs في Supabase Auth على نطاق Vercel الفعلي والنطاق المحلي الذي تستخدمه للتطوير، ثم أعد النشر بعد إضافة المتغيرات.
+7. عند اكتمال الإعداد، أنشئ مستودع GitHub جديدًا، ثم نفّذ: `git init`, `git add .`, `git commit -m "Initial platform setup"`, `git branch -M main`, `git remote add origin <GitHub-Repo-URL>`, `git push -u origin main`.
 
 ## الإشعارات المطلوبة
 

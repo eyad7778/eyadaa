@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7f2">
+  <title>إنشاء حساب طالب | المؤرخ الصغير</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{font-family:Alexandria,sans-serif;color:#202b27;background:#f4f7f2}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px}.panel{width:min(500px,100%);background:#fff;border:1px solid #e4eae3;border-radius:12px;padding:28px;box-shadow:0 18px 55px #18392b12}.brand{font-size:12px;color:#24664e;font-weight:700}.brand strong{display:block;color:#202b27;font-size:19px}.panel h1{font-size:20px;margin:25px 0 6px}.panel p{font-size:11px;color:#718078;line-height:1.9}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.field{display:block;margin:12px 0}.field.full{grid-column:1/-1}.field span{display:block;font-size:10px;font-weight:600;margin-bottom:6px}.field input{width:100%;border:1px solid #e4eae3;border-radius:7px;padding:12px;font:inherit;font-size:11px}.submit{width:100%;border:0;border-radius:7px;background:#24664e;color:#fff;padding:12px;font:inherit;font-size:11px;font-weight:700;cursor:pointer;margin-top:14px}.submit:disabled{opacity:.6;cursor:wait}.status{min-height:24px;font-size:10px;color:#24664e;margin-top:12px}.back{display:block;text-align:center;font-size:10px;color:#24664e;text-decoration:none;margin-top:12px}@media(max-width:520px){.form-grid{display:block}}
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <div class="brand"><strong>📜 المؤرخ الصغير</strong>منصة مستر إياد الطيب التعليمية</div>
+    <h1>إنشاء حساب طالب</h1>
+    <p>اكتب بياناتك لنتابع دروسك وتقدمك. أول حساب يُنشأ في المنصة يصبح تلقائيًا حساب المدير والمدرس.</p>
+    <form id="signupForm">
+      <div class="form-grid">
+        <label class="field full"><span>الاسم بالكامل</span><input name="displayName" required maxlength="100" autocomplete="name"></label>
+        <label class="field"><span>البريد الإلكتروني</span><input name="email" type="email" required autocomplete="email"></label>
+        <label class="field"><span>رقم الطالب</span><input name="phone" type="tel" required maxlength="30" autocomplete="tel"></label>
+        <label class="field"><span>رقم ولي الأمر</span><input name="guardianPhone" type="tel" required maxlength="30" autocomplete="tel"></label>
+        <label class="field"><span>الصف الدراسي</span><input name="grade" required maxlength="100" placeholder="مثل: الصف الثالث الإعدادي"></label>
+        <label class="field full"><span>كلمة المرور</span><input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="8 أحرف على الأقل"></label>
+      </div>
+      <button class="submit" type="submit">إنشاء الحساب</button>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </form>
+    <a class="back" href="/">العودة إلى تسجيل الدخول</a>
+  </main>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const form = document.getElementById('signupForm');
+    const statusNode = document.getElementById('status');
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = form.querySelector('button');
+      const values = new FormData(form);
+      button.disabled = true;
+      statusNode.textContent = 'جارٍ إنشاء الحساب...';
+      try {
+        const configResponse = await fetch('/api/config', { cache: 'no-store' });
+        if (!configResponse.ok) throw new Error('أكمل إعداد Supabase أولًا.');
+        const config = await configResponse.json();
+        const client = createClient(config.supabaseUrl, config.anonKey);
+        const { data, error } = await client.auth.signUp({
+          email: String(values.get('email')).trim().toLowerCase(),
+          password: values.get('password'),
+          options: {
+            data: {
+              display_name: String(values.get('displayName')).trim(),
+              phone: String(values.get('phone')).trim(),
+              guardian_phone: String(values.get('guardianPhone')).trim(),
+              grade: String(values.get('grade')).trim()
+            },
+            emailRedirectTo: window.location.origin
+          }
+        });
+        if (error) throw error;
+        if (!data.session) {
+          statusNode.textContent = 'تم إنشاء الحساب. افحص بريدك لتأكيده، ثم سجّل الدخول من الصفحة الرئيسية.';
+          return;
+        }
+        window.location.href = '/';
+      } catch (error) {
+        statusNode.textContent = error.message || 'تعذر إنشاء الحساب.';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

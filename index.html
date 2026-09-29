@@ -400,6 +400,11 @@
       const watermarkTimer=setInterval(()=>{if(document.hidden||!watermark.isConnected)return;position=(position+1)%positions.length;watermark.style.right=positions[position][0];watermark.style.top=positions[position][1]},12000);
       frame.addEventListener('DOMNodeRemoved',()=>clearInterval(watermarkTimer),{once:true});
     };
+    window.medadNavigate=(role)=>{
+      roleSelect.value=role==='teacher'?'teacher':'student';
+      view='dashboard';
+      render();
+    };
     render();
     notifyFirstVisit();
   </script>

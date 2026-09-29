@@ -30,7 +30,7 @@ function applySession(user, profile) {
   }
 }
 
-async function refreshSession(user) {
+async function refreshSession(user, shouldRedirect = false) {
   if (!user) {
     applySession(null, null);
     window.medadClearStudentData?.();
@@ -40,7 +40,7 @@ async function refreshSession(user) {
 
   const { data, error } = await client
     .from('profiles')
-    .select('id, display_name, avatar_url, role')
+    .select('id, display_name, avatar_url, phone, guardian_phone, grade, role')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -55,6 +55,7 @@ async function refreshSession(user) {
   if (data?.role !== 'owner') {
     await window.medadLoadStudentDashboard?.(client, user);
   }
+  if (shouldRedirect) window.medadNavigate?.(data?.role === 'owner' ? 'teacher' : 'student');
 }
 
 function closeAuthDialog() {
@@ -69,8 +70,8 @@ function openAuthDialog(mode = 'login') {
   overlay.innerHTML = `
     <form class="modal" id="authForm">
       <h2>${mode === 'signup' ? 'إنشاء حساب طالب' : 'تسجيل الدخول'}</h2>
-      <p>${mode === 'signup' ? 'أنشئ حسابك لمتابعة دروسك وتقدمك.' : 'تابع كورساتك ونتائجك من حسابك.'}</p>
-      ${mode === 'signup' ? '<label>الاسم</label><input name="displayName" required autocomplete="name" maxlength="100" placeholder="اسم الطالب">' : ''}
+      <p>${mode === 'signup' ? 'أول حساب يُنشأ يصبح حساب المدير والمدرس، وبعده تُنشأ حسابات الطلاب من هنا.' : 'استخدم بريدك وكلمة مرورك، وسنفتح لك لوحتك تلقائيًا حسب دورك.'}</p>
+      ${mode === 'signup' ? '<label>اسم الطالب</label><input name="displayName" required autocomplete="name" maxlength="100" placeholder="الاسم بالكامل"><label>رقم الهاتف</label><input name="phone" type="tel" required autocomplete="tel" maxlength="30" placeholder="رقم الطالب"><label>رقم ولي الأمر</label><input name="guardianPhone" type="tel" required autocomplete="tel" maxlength="30" placeholder="رقم ولي الأمر"><label>الصف الدراسي</label><input name="grade" required maxlength="100" placeholder="مثل: الصف الثالث الإعدادي">' : ''}
       <label>البريد الإلكتروني</label><input name="email" type="email" required autocomplete="email" placeholder="name@example.com">
       <label>كلمة المرور</label><input name="password" type="password" required minlength="8" autocomplete="${mode === 'signup' ? 'new-password' : 'current-password'}" placeholder="8 أحرف على الأقل">
       <div id="authError" role="status" style="color:#b13e2d;font-size:10px;margin-top:8px"></div>
@@ -81,6 +82,7 @@ function openAuthDialog(mode = 'login') {
       <button type="button" data-auth-mode="${mode === 'signup' ? 'login' : 'signup'}" style="border:0;background:none;color:#24664e;padding:12px 0 0;font:inherit;font-size:10px">
         ${mode === 'signup' ? 'لديك حساب؟ سجّل الدخول' : 'طالب جديد؟ أنشئ حسابًا'}
       </button>
+      ${mode === 'login' ? '<a href="/student-signup.html" style="display:block;color:#24664e;font-size:10px;padding-top:8px">فتح صفحة إنشاء حساب الطالب</a>' : ''}
     </form>`;
   document.body.append(overlay);
 
@@ -109,7 +111,12 @@ function openAuthDialog(mode = 'login') {
         const { data, error } = await client.auth.signUp({
           ...credentials,
           options: {
-            data: { display_name: String(values.get('displayName')).trim() },
+            data: {
+              display_name: String(values.get('displayName')).trim(),
+              phone: String(values.get('phone')).trim(),
+              guardian_phone: String(values.get('guardianPhone')).trim(),
+              grade: String(values.get('grade')).trim()
+            },
             emailRedirectTo: window.location.origin
           }
         });
@@ -119,13 +126,13 @@ function openAuthDialog(mode = 'login') {
           return;
         }
         closeAuthDialog();
-        await refreshSession(data.user);
+        await refreshSession(data.user, true);
         toast('تم إنشاء الحساب. أهلاً بك في منصة المؤرخ الصغير.');
       } else {
         const { data, error } = await client.auth.signInWithPassword(credentials);
         if (error) throw error;
         closeAuthDialog();
-        await refreshSession(data.user);
+        await refreshSession(data.user, true);
         toast('تم تسجيل الدخول بنجاح.');
       }
     } catch (error) {
